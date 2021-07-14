@@ -12,3 +12,8 @@ Major prediction:
 2. NPV (Investment appraisal)
 3. Fraud
 4. Bankruptcy
+
+
+Dataset preprocessing:
+- Using absolute figure is unrealistic due to inflation and company size bias
+- Using ratios and growth for better results
