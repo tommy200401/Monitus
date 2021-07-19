@@ -1,5 +1,5 @@
-# FS_Analysis_Capstone
-Database for Financial Statement Analysis
+# Monitus
+Database for Machine Learning Financial Statement Analysis
 
 Task:
 1. Obtain financial statment info
