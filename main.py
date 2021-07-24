@@ -2,11 +2,11 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from PIL import Image
 import requests
 import json
 from urllib.request import urlopen
 import pickle
+import sklearn
 
 # %%
 
@@ -22,8 +22,7 @@ def webpage():
     """
     st.markdown(html_temp, unsafe_allow_html=True)
 
-    image = Image.open('image/logo_long.png')
-    st.image(image)
+    st.image('image/logo_long.png')
     st.write('You can search the company information and prediction using this tool.')
 
     with st.sidebar.form('Company Information'):
@@ -67,6 +66,4 @@ def webpage():
 if __name__ == '__main__':
     webpage()
 
-# %%
-!conda install matplotlib
 # %%
