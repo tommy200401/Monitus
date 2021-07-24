@@ -1,5 +1,5 @@
-# FS_Analysis_Capstone
-Database for Financial Statement Analysis
+# Monitus
+Database for Machine Learning Financial Statement Analysis
 
 Task:
 1. Obtain financial statment info
@@ -12,3 +12,8 @@ Major prediction:
 2. NPV (Investment appraisal)
 3. Fraud
 4. Bankruptcy
+
+
+Dataset preprocessing:
+- Using absolute figure is unrealistic due to inflation and company size bias
+- Using ratios and growth for better results
