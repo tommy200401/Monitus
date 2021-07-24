@@ -68,5 +68,3 @@ if __name__ == '__main__':
     webpage()
 
 # %%
-!conda install matplotlib
-# %%
