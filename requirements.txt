@@ -1,0 +1,11 @@
+streamlit
+pandas
+numpy
+PIL
+requests
+json
+urllib
+pickle
+sklearn
+matplotlib
+seaborn
