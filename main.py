@@ -7,8 +7,7 @@ import requests
 import json
 from urllib.request import urlopen
 import pickle
-import matplotlib.pyplot as plt
-import seaborn as sns
+
 # %%
 
 
@@ -68,4 +67,6 @@ def webpage():
 if __name__ == '__main__':
     webpage()
 
+# %%
+!conda install matplotlib
 # %%
