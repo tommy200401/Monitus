@@ -25,14 +25,26 @@ def webpage():
     st.image('image/logo_long.png')
     st.write('You can search the company information and prediction using this tool.')
 
+    # Define prediction
+
+    def prediction(company, year, quarter):
+        # load prediction model
+        with open('model/tree.pkl', 'rb') as pickle_in:
+            clf = pickle.load(pickle_in)
+            pickle_in.close()
+
+        us = pd.read_csv('data/us_tw.csv')
+
     with st.sidebar.form('Company Information'):
 
         st.write('Choose a company for prediction:')
         company_name = st.text_input("Company Name", 'AAPL')
         st.markdown('''<a href="https://www.google.com/">List of companies we provided</a>''',
                     unsafe_allow_html=True,)
-        year = st.text_input("Year", 2020)
-        quarter = st.slider('Quarter', min_value=1,
+        year = st.text_input("Year (for prediction)", 2020)
+        st.markdown(
+            'Our dataset ranges from year 2001 to 2020 (if the company existed on that year)')
+        quarter = st.slider('Quarter (for prediction)', min_value=1,
                             max_value=4, value=1, step=1)
         submitted = st.form_submit_button("Search Company Info")
         submitted_2 = st.form_submit_button("Predict bankruptcy")
@@ -53,11 +65,6 @@ def webpage():
         st.write(data[0]['description'])
 
     if submitted_2:
-        # load prediction model
-        with open('model/tree.pkl', 'rb') as pickle_in:
-            classifier = pickle.load(pickle_in)
-            pickle_in.close()
-        us = pd.read_csv('data/us_bankruptcy.csv')
 
         st.write(us.iloc[0])
 
