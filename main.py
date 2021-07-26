@@ -1,21 +1,40 @@
 # %%
-from google.protobuf.symbol_database import Default
+from functools import cached_property
+import json
+import pickle
+import base64
+import re
+from typing import Any
+from urllib.request import urlopen
+
 import streamlit as st
 import pandas as pd
 import numpy as np
-import json
-from urllib.request import urlopen
-import pickle
+from google.protobuf.symbol_database import Default
 from sklearn.feature_extraction.text import CountVectorizer
-import base64
-import re
+from string import punctuation
+from textblob import TextBlob
 from nltk.corpus import stopwords
 from nltk import word_tokenize
 from nltk.stem import WordNetLemmatizer
-from string import punctuation
-from textblob import TextBlob
+import requests
+
 
 # %%
+class CompanyInfo:
+    def __init__(self, ticker: str) -> None:
+        res = requests.get(
+            f'https://financialmodelingprep.com/api/v3/profile/{ticker}?apikey=f33b3631d5140a4f1c87e7f2eafd8fdd')
+        self.raw = res.json()[0]
+
+    def __getattribute__(self, name: str) -> Any:
+        if name != 'raw' and name in self.raw:
+            return self.raw[name]
+        return super().__getattribute__(name)
+
+    @cached_property
+    def df(self):
+        return pd.DataFrame.from_dict([self.raw]).rename(columns={'0': 'Company Info'})
 
 
 # @st.cache(suppress_st_warning=True)
@@ -66,45 +85,39 @@ def webpage():
 
     if submitted:
         try:
-            url_comp = urlopen(
-                f'https://financialmodelingprep.com/api/v3/profile/{company_name}?apikey=f33b3631d5140a4f1c87e7f2eafd8fdd')
+            company_info = CompanyInfo(company_name)
         except:
             st.write(f'No company with {company_name} is found.')
-        data = json.loads(url_comp.read().decode('utf-8'))
-        df = pd.DataFrame.from_dict(data).rename(columns={'0': 'Company Info'})
 
-        temp = data[0]['companyName']
-        st.markdown(f"**{temp}**")
-        st.image(data[0]['image'])
-        col1, col2 = st.beta_columns(2)
-        col1.dataframe(
-            df.drop(columns=['companyName', 'description', 'image', 'defaultImage']).T)
-        col2.write('Company description:')
-        col2.write(data[0]['description'])
+        col1, col2 = st.beta_columns([3,6])
+        col1.markdown(f"# {company_info.companyName}")
+        col1.image(company_info.image)
+        col1.write('''
+        ## Company description:
+        %s 
+        ''' % company_info.description)
 
-        website = data[0]['website']
-        if website != 0:
-            st.markdown(
-                f'<a href="{website}">Go to company website</a>', unsafe_allow_html=True)
-        csv = df.to_csv(index=False)
+        if company_info.website:
+            col1.markdown(
+                f'<a href="{company_info.website}">Go to company website</a>', unsafe_allow_html=True)
+        csv = company_info.df.to_csv(index=False)
         b64 = base64.b64encode(csv.encode()).decode()
-        href = f'<a href="data:file/csv;base64,{b64}" download="{company_name}_info.csv">Download csv file for {temp} info</a>'
-        st.markdown(href, unsafe_allow_html=True)
+        href = f'<a href="data:file/csv;base64,{b64}" download="{company_name}_info.csv">Download csv file for {company_info.companyName} info</a>'
+        col1.markdown(href, unsafe_allow_html=True)
+
+        col2.table(
+            [map(str, x) for x in company_info.raw.items() if x[0] not in {'companyName', 'description', 'image', 'defaultImage'}]
+        )
 
     if submitted_2:
-
         try:
-            url_comp = urlopen(
-                f'https://financialmodelingprep.com/api/v3/profile/{company_name}?apikey=f33b3631d5140a4f1c87e7f2eafd8fdd')
+            company_info = CompanyInfo(company_name)
         except:
             st.write(f'No company with {company_name} is found.')
-        data = json.loads(url_comp.read().decode('utf-8'))
-        df = pd.DataFrame.from_dict(data).rename(columns={'0': 'Company Info'})
-        col1, col2 = st.beta_columns(2)
 
-        temp = data[0]['companyName']
-        col1.markdown(f"**{temp}**")
-        col1.image(data[0]['image'])
+        col1, col2 = st.beta_columns([3,6])
+        col1.markdown(f"# {company_info.companyName}")
+        col1.image(company_info.image)
 
         asset = pd.read_csv('data/asset_df.csv')
         income = pd.read_csv('data/income_df.csv')
