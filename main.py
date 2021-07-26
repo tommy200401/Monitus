@@ -10,6 +10,7 @@ from urllib.request import urlopen
 import streamlit as st
 import pandas as pd
 import numpy as np
+from streamlit.delta_generator import DeltaGenerator
 from google.protobuf.symbol_database import Default
 from sklearn.feature_extraction.text import CountVectorizer
 from string import punctuation
@@ -37,7 +38,7 @@ class CompanyInfo:
         return pd.DataFrame.from_dict([self.raw]).rename(columns={'0': 'Company Info'})
 
 
-def generate_buttons(*labels: List[str], context=st):
+def generate_buttons(*labels: List[str], context: DeltaGenerator = st) -> List[DeltaGenerator]:
     return [
         col.form_submit_button(label)
         for col, label in zip(
@@ -47,7 +48,7 @@ def generate_buttons(*labels: List[str], context=st):
     ]
 
 
-def create_result(ticker: str, context=st):
+def create_result(ticker: str, show_img=False, show_desc=False, context: DeltaGenerator = st) -> List[DeltaGenerator]:
     try:
         company_info = CompanyInfo(ticker)
     except:
@@ -55,15 +56,19 @@ def create_result(ticker: str, context=st):
 
     context.markdown(f"# {company_info.companyName}")
     col1, col2 = context.beta_columns([3, 6])
-    col1.image(company_info.image)
-    col1.write('''
-    ## Company description:
-    %s 
-    ''' % company_info.description)
+    if show_img:
+        col1.image(company_info.image)
+    if show_desc:
+        col1.write('''
+        ## Company description:
+        %s 
+        ''' % company_info.description)
 
     return col1, col2
 
 # @st.cache(suppress_st_warning=True)
+
+
 def webpage():
     st.set_page_config(page_title='Monitus', layout="wide",
                        initial_sidebar_state='collapsed')
@@ -93,42 +98,44 @@ def webpage():
         st.markdown('''<a href="https://drive.google.com/file/d/17etxeduBkckCdOH5WUElGEuULyFp_mIs">List of companies we provided</a>''',
                     unsafe_allow_html=True,)
 
-        year = cols[1].text_input("Year (for prediction)", 2020, help='Our dataset ranges from year 2001 to 2020 (if the company existed on that year)')
+        year = cols[1].text_input("Year (for prediction)", 2020,
+                                  help='Our dataset ranges from year 2001 to 2020 (if the company existed on that year)')
         quarter = cols[2].slider('Quarter (for prediction)', min_value=1,
-                            max_value=4, value=1, step=1)
+                                 max_value=4, value=1, step=1)
 
         st.write('Search engine:')
-        submitted, submitted_2, submbited_3 = generate_buttons(
+        basic_info, fin_statement, figure_dash = generate_buttons(
             'Search Company Info',
             'Show financial statement',
             'Show figure dashboard',
         )
 
         st.write('Prediction engine:')
-        submitted_4, submitted_5, submitted_6 = generate_buttons(
+        bankruptcy, earnings_call, submitted_6 = generate_buttons(
             'Bankruptcy prediction',
             'Earnings Call analysis',
             'Investment appraisal',
         )
 
-    if submitted:
+    if basic_info:
         try:
             company_info = CompanyInfo(company_name)
         except:
             st.write(f'No company with {company_name} is found.')
 
-        col1, col2 = create_result(company_name)
+        col1, col2 = create_result(company_name, show_desc=True, show_img=True)
 
         csv = company_info.df.to_csv(index=False)
         b64 = base64.b64encode(csv.encode()).decode()
         href = f'<a href="data:file/csv;base64,{b64}" download="{company_name}_info.csv">Download csv file for {company_info.companyName} info</a>'
         col1.markdown(href, unsafe_allow_html=True)
 
-        col2.table(company_info.df.drop(columns=['companyName', 'description', 'image', 'defaultImage']).T)
+        col2.table(company_info.df.drop(
+            columns=['companyName', 'description', 'image', 'defaultImage']).T)
 
-    if submitted_2:
+    if fin_statement:
 
-        col1, col2 = create_result(company_name)
+        col1, col2 = create_result(company_name, show_desc=True, show_img=True)
 
         asset = pd.read_csv('data/asset_df.csv')
         income = pd.read_csv('data/income_df.csv')
@@ -172,8 +179,7 @@ def webpage():
         href = f'<a href="data:file/csv;base64,{b64}" download="{company_name}_cashflow.csv">Download csv file</a>'
         col2.markdown(href, unsafe_allow_html=True)
 
-    if submbited_3:
-
+    if figure_dash:
         col1, col2 = create_result(company_name)
 
         ratio = pd.read_csv('data/ratio_df.csv')
@@ -197,30 +203,30 @@ def webpage():
         growth = growth.loc[(growth['symbol'] == company_name) & (growth['year'] == int(
             year)) & (growth['period'] == f'Q{quarter}')]
 
-        st.write(ratio.drop(columns='Unnamed: 0').T)
+        col1.write(ratio.drop(columns='Unnamed: 0').T)
 
         csv = ratio.to_csv(index=False)
         b64 = base64.b64encode(csv.encode()).decode()
         href = f'<a href="data:file/csv;base64,{b64}" download="{company_name}_ratio.csv">Download csv file</a>'
-        st.markdown(href, unsafe_allow_html=True)
+        col1.markdown(href, unsafe_allow_html=True)
 
-        st.bar_chart(data=ratio.drop(
+        col2.bar_chart(data=ratio.drop(
             columns=['Unnamed: 0', 'quarter', 'year', 'period', 'symbol', 'date', 'daysOfSalesOutstanding', 'daysOfInventoryOutstanding', 'operatingCycle', 'daysOfPayablesOutstanding', 'cashConversionCycle']).T)
-        st.bar_chart(data=ratio[['daysOfSalesOutstanding', 'daysOfInventoryOutstanding',
+        col2.bar_chart(data=ratio[['daysOfSalesOutstanding', 'daysOfInventoryOutstanding',
                                  'operatingCycle', 'daysOfPayablesOutstanding', 'cashConversionCycle']].T)
 
-        st.write(growth.drop(columns='Unnamed: 0').T)
+        col1.write(growth.drop(columns='Unnamed: 0').T)
 
         csv = growth.to_csv(index=False)
         b64 = base64.b64encode(csv.encode()).decode()
         href = f'<a href="data:file/csv;base64,{b64}" download="{company_name}_growth.csv">Download csv file</a>'
-        st.markdown(href, unsafe_allow_html=True)
+        col1.markdown(href, unsafe_allow_html=True)
 
-        st.bar_chart(data=growth.drop(
+        col2.bar_chart(data=growth.drop(
             columns=['Unnamed: 0', 'quarter', 'year', 'period', 'symbol', 'date']).T)
 
-    if submitted_4:
-        col1, col2 = create_result(company_name)
+    if bankruptcy:
+        col1, col2 = create_result(company_name, show_desc=True, show_img=True)
 
         pickle_in = open('model/forest.pkl', 'rb')
         classifier = pickle.load(pickle_in)
@@ -264,9 +270,9 @@ def webpage():
     #                            for i in filtered_sentence])
     #     return clean_list
 
-    if submitted_5:
+    if earnings_call:
 
-        col1, col2 = create_result(company_name)
+        col1, col2 = create_result(company_name, show_desc=True, show_img=True)
 
         col2.markdown(
             '''
