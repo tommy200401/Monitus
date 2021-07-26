@@ -1,0 +1,11 @@
+version: '3'
+
+services:
+  app:
+    image: monitus
+    container_name: monitus
+    restart: always
+    build: .
+    ports:
+      - "8501:8501"
+    command: streamlit run main.py
