@@ -9,9 +9,8 @@ Task:
 
 Major prediction:
 1. Figure/ratio trend 
-2. NPV (Investment appraisal)
-3. Fraud
-4. Bankruptcy
+2. Income/dividend growth (Investment appraisal)
+3. Bankruptcy
 
 
 Dataset preprocessing:
