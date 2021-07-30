@@ -22,14 +22,15 @@ import requests
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 import matplotlib.pyplot as plt
 
+from fmp_api import ProfileApi, EarningCallTranscriptApi
+
+
 # %%
 
 
 class CompanyInfo:
     def __init__(self, ticker: str) -> None:
-        res = requests.get(
-            f'https://financialmodelingprep.com/api/v3/profile/{ticker}?apikey=f33b3631d5140a4f1c87e7f2eafd8fdd')
-        self.raw = res.json()[0]
+        self.raw = ProfileApi.get(ticker=ticker)[0]
 
     def __getattribute__(self, name: str) -> Any:
         if name != 'raw' and name in self.raw:
@@ -276,13 +277,11 @@ def webpage():
         sid = SentimentIntensityAnalyzer()
         for i in range(1, 5):
             try:
-                url = (
-                    f'https://financialmodelingprep.com/api/v3/earning_call_transcript/{company_name}?quarter={i}&year={year}&apikey=f33b3631d5140a4f1c87e7f2eafd8fdd')
-                response = urlopen(url)
+                data = EarningCallTranscriptApi.get(
+                    ticker=company_name, quarter=i, year=year)[0]['content']
             except:
                 st.write(
                     f'No earnings call with {company_name} on year {year} quarter {i} is found.')
-            data = response.read().decode("utf-8")
             polarity_arr.append(TextBlob(data).sentiment.polarity)
             subjectivity_arr.append(TextBlob(data).sentiment.subjectivity)
             sid_arr.append(sid.polarity_scores(data))
