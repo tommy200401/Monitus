@@ -19,9 +19,12 @@ from nltk.corpus import stopwords
 from nltk import word_tokenize
 from nltk.stem import WordNetLemmatizer
 import requests
-
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
+import matplotlib.pyplot as plt
 
 # %%
+
+
 class CompanyInfo:
     def __init__(self, ticker: str) -> None:
         res = requests.get(
@@ -60,8 +63,8 @@ def create_result(ticker: str, show_img=False, show_desc=False, context: DeltaGe
         col1.image(company_info.image)
     if show_desc:
         col1.write('''
-        ## Company description:
-        %s 
+        # Company description:
+        %s
         ''' % company_info.description)
 
     return col1, col2
@@ -111,7 +114,7 @@ def webpage():
         )
 
         st.write('Prediction engine:')
-        bankruptcy, earnings_call, submitted_6 = generate_buttons(
+        bankruptcy, earnings_call, investment = generate_buttons(
             'Bankruptcy prediction',
             'Earnings Call analysis',
             'Investment appraisal',
@@ -213,7 +216,7 @@ def webpage():
         col2.bar_chart(data=ratio.drop(
             columns=['Unnamed: 0', 'quarter', 'year', 'period', 'symbol', 'date', 'daysOfSalesOutstanding', 'daysOfInventoryOutstanding', 'operatingCycle', 'daysOfPayablesOutstanding', 'cashConversionCycle']).T)
         col2.bar_chart(data=ratio[['daysOfSalesOutstanding', 'daysOfInventoryOutstanding',
-                                 'operatingCycle', 'daysOfPayablesOutstanding', 'cashConversionCycle']].T)
+                                   'operatingCycle', 'daysOfPayablesOutstanding', 'cashConversionCycle']].T)
 
         col1.write(growth.drop(columns='Unnamed: 0').T)
 
@@ -255,28 +258,13 @@ def webpage():
             col2.write(
                 f'Warning: {company_name} is likely to be bankrupt within a year according to prediction.')
 
-    # def word_preprocess(n):
-    #     # --- Remove separaters
-    #     n = re.sub(r'\n', '', n)
-    #     n = re.sub(r'--', '', n)
-    #     # --- Remove stopword
-    #     stop_words = set(stopwords.words('english')+list(punctuation))
-    #     words_token = [w for w in word_tokenize(
-    #         n) if not w.lower() in stop_words]
-    #     filtered_sentence = [i for i in words_token if i not in stop_words]
-    #     # --- Lemmatize
-    #     lemmatizer = WordNetLemmatizer()
-    #     clean_list = ",".join([lemmatizer.lemmatize(i)
-    #                            for i in filtered_sentence])
-    #     return clean_list
-
     if earnings_call:
 
         col1, col2 = create_result(company_name, show_desc=True, show_img=True)
 
         col2.markdown(
             '''
-            ## Sentiment analysis (with TextBlob)
+            # Sentiment analysis (with TextBlob)
             The polarity score is a float within the range [-1.0, 1.0].
             The subjectivity is a float within the range [0.0, 1.0] where
             0.0 is very objective and 1.0 is very subjective.'''
@@ -284,6 +272,8 @@ def webpage():
 
         polarity_arr = []
         subjectivity_arr = []
+        sid_arr = []
+        sid = SentimentIntensityAnalyzer()
         for i in range(1, 5):
             try:
                 url = (
@@ -295,24 +285,104 @@ def webpage():
             data = response.read().decode("utf-8")
             polarity_arr.append(TextBlob(data).sentiment.polarity)
             subjectivity_arr.append(TextBlob(data).sentiment.subjectivity)
+            sid_arr.append(sid.polarity_scores(data))
 
         col2.bar_chart(pd.DataFrame(
             {'polarity': polarity_arr}, index=['Q1', 'Q2', 'Q3', 'Q4']))
         col2.bar_chart(pd.DataFrame(
             {'subjectivity': subjectivity_arr}, index=['Q1', 'Q2', 'Q3', 'Q4']))
 
-        # pickle_in = open('model/tree.pkl', 'rb')
-        # classifier = pickle.load(pickle_in)
+        col2.markdown(
+            '''
+            # Sentiment analysis (with Sentiment Intensity Analyzer)
+            The scores returned represented how positive/negative is the original text.'''
+        )
 
-        # cv = CountVectorizer()
-        # data_x = cv.fit_transform(list(data2))
-        # criteria = ['threeYRevenueGrowthPerShare', 'fiveYRevenueGrowthPerShare', 'tenYRevenueGrowthPerShare',
-        #             'threeYDividendperShareGrowthPerShare', 'fiveYDividendperShareGrowthPerShare', 'tenYDividendperShareGrowthPerShare']
-        # for i in criteria:
-        #     pickle_in = open(f'model/{i}.pkl', 'rb')
-        #     classifier = pickle.load(pickle_in)
-        #     prediction = classifier.predict(data_x)
-        #     st.write(f'{i}, {prediction}')
+        labels = ['Q1', 'Q2', 'Q3', 'Q4']
+        sid_pos = [i['pos'] for i in sid_arr]
+        sid_neu = [i['neu'] for i in sid_arr]
+        sid_neg = [i['neg'] for i in sid_arr]
+
+        x = np.arange(len(labels))
+        width = 0.2
+
+        fig, ax = plt.subplots()
+
+        rects1 = ax.bar(x - 0.2, sid_pos, width, label='Positive')
+        rects2 = ax.bar(x, sid_neu, width, label='Neutral')
+        rects3 = ax.bar(x + 0.2, sid_neg, width, label='Negative')
+
+        ax.legend()
+
+        fig.tight_layout()
+
+        col2.pyplot(fig)
+
+    def word_preprocess(n):
+        # --- Remove separaters
+        n = re.sub(r'\n', '', n)
+        n = re.sub(r'--', '', n)
+        # --- Remove stopword
+        stop_words = set(stopwords.words('english')+list(punctuation))
+        words_token = [w for w in word_tokenize(
+            n) if not w.lower() in stop_words]
+        filtered_sentence = [i for i in words_token if i not in stop_words]
+        # --- Lemmatize
+        lemmatizer = WordNetLemmatizer()
+        clean_list = ["".join([lemmatizer.lemmatize(i)
+                               for i in filtered_sentence])]
+        return clean_list
+
+    if investment:
+
+        pickle_in = open('model/tt.pkl', 'rb')
+        tt = pickle.load(pickle_in)
+        pickle_in = open('model/cv.pkl', 'rb')
+        cv = CountVectorizer(decode_error="replace",
+                             vocabulary=pickle.load(pickle_in))
+        pickle_in = open('model/grid.pkl', 'rb')
+        grid = pickle.load(pickle_in)
+
+        col1, col2 = create_result(company_name, show_desc=True, show_img=True)
+
+        col2.markdown(
+            '''# Prediction from analysing earnings call transcript:''')
+
+        try:
+            url = (
+                f'https://financialmodelingprep.com/api/v3/earning_call_transcript/{company_name}?quarter={quarter}&year={year}&apikey=f33b3631d5140a4f1c87e7f2eafd8fdd')
+            response = urlopen(url)
+        except:
+            st.write(
+                f'No earnings call with {company_name} on year {year} quarter {quarter} is found.')
+
+        data = json.loads(response.read().decode('utf-8'))
+
+        temp = word_preprocess(data[0]['content'])
+        test_tt = tt.transform(cv.transform(temp))
+        prediction = grid.predict(test_tt)
+        if prediction == 1:
+            result = 'positive'
+        else:
+            result = 'negative to neutral'
+        col2.markdown(
+            f'According to analysis from earnings call, the company will have a [{result}] dividend growth.')
+
+        col2.markdown('''# Prediction from the latest professional firms:''')
+
+        try:
+            url = (
+                f'https://financialmodelingprep.com/api/v3/grade/{company_name}?limit=10&apikey=f33b3631d5140a4f1c87e7f2eafd8fdd')
+            response = urlopen(url)
+        except:
+            st.write(
+                f'No report with {company_name} is found.')
+        data2 = json.loads(response.read().decode('utf-8'))
+        col2.write(pd.DataFrame(data2).drop('symbol', axis=1))
+
+        col2.write("")
+        col2.write('Content of earnings call: ')
+        col2.write(data[0]['content'])
 
 
 # %%
