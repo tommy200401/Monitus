@@ -1,4 +1,3 @@
-from genericpath import isdir
 import json
 import os
 from datetime import datetime, timezone, timedelta
@@ -53,7 +52,7 @@ class FMPApi:
     def _get(cls, key):
         if (
             not cls.use_cache
-            or not cls.cache_base_path.isdir()
+            or not cls.cache_base_path.is_dir()
         ):
             return None
         if cls._cache is None:
@@ -68,7 +67,7 @@ class FMPApi:
     def _set(cls, key, value):
         if (
             not cls.use_cache
-            or not cls.cache_base_path.isdir()
+            or not cls.cache_base_path.is_dir()
         ):
             return
         if cls._cache is None:
