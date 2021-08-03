@@ -1,7 +1,9 @@
+from genericpath import isdir
 import json
 import os
 from datetime import datetime, timezone, timedelta
 from enum import Enum, auto
+from pathlib import Path
 
 import requests
 
@@ -27,9 +29,7 @@ class FMPApi:
     _cache: dict
     domain = 'https://financialmodelingprep.com'
     use_cache = True
-    cache_base_path = os.path.join(
-        os.environ.get('HOME'), '.cache'
-    )
+    cache_base_path = Path.home().joinpath('.cache')
     _cache = None
     expire = dict(days=14)
 
@@ -47,13 +47,13 @@ class FMPApi:
 
     @classmethod
     def get_cache_path(cls):
-        return os.path.join(cls.cache_base_path, f'financialmodelingprep-{cls.__name__}.json')
+        return cls.cache_base_path.joinpath(f'financialmodelingprep-{cls.__name__}.json')
 
     @classmethod
     def _get(cls, key):
         if (
             not cls.use_cache
-            or not os.path.isdir(cls.cache_base_path)
+            or not cls.cache_base_path.isdir()
         ):
             return None
         if cls._cache is None:
@@ -68,7 +68,7 @@ class FMPApi:
     def _set(cls, key, value):
         if (
             not cls.use_cache
-            or not os.path.isdir(cls.cache_base_path)
+            or not cls.cache_base_path.isdir()
         ):
             return
         if cls._cache is None:
