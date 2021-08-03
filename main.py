@@ -53,15 +53,19 @@ def generate_buttons(*labels: List[str], context: DeltaGenerator = st) -> List[D
 
 
 def create_result(ticker: str, show_img=False, show_desc=False, context: DeltaGenerator = st) -> List[DeltaGenerator]:
+    col1, col2 = context.beta_columns([3, 6])
+
     try:
         company_info = CompanyInfo(ticker)
-    except:
+    except Exception as ex:
+        print(ex)
         context.write(f'No company with {ticker} is found.')
+        return col1, col2
 
     context.markdown(f"# {company_info.companyName}")
-    col1, col2 = context.beta_columns([3, 6])
     if show_img:
         col1.image(company_info.image)
+
     if show_desc:
         col1.write('''
         # Company description:
@@ -124,8 +128,10 @@ def webpage():
     if basic_info:
         try:
             company_info = CompanyInfo(company_name)
-        except:
+        except Exception as ex:
+            print(ex)
             st.write(f'No company with {company_name} is found.')
+            return
 
         col1, col2 = create_result(company_name, show_desc=True, show_img=True)
 
@@ -249,6 +255,7 @@ def webpage():
             except:
                 col2.write(f'No {year} data with {company_name} is found.')
         except:
+
             col2.write(f'No company with {company_name} is found.')
 
         prediction = classifier.predict(df.iloc[:, 5:])
@@ -279,7 +286,8 @@ def webpage():
             try:
                 data = EarningCallTranscriptApi.get(
                     ticker=company_name, quarter=i, year=year)[0]['content']
-            except:
+            except Exception as ex:
+                print(ex)
                 st.write(
                     f'No earnings call with {company_name} on year {year} quarter {i} is found.')
             polarity_arr.append(TextBlob(data).sentiment.polarity)
@@ -351,7 +359,8 @@ def webpage():
             url = (
                 f'https://financialmodelingprep.com/api/v3/earning_call_transcript/{company_name}?quarter={quarter}&year={year}&apikey=f33b3631d5140a4f1c87e7f2eafd8fdd')
             response = urlopen(url)
-        except:
+        except Exception as ex:
+            print(ex)
             st.write(
                 f'No earnings call with {company_name} on year {year} quarter {quarter} is found.')
 
@@ -373,9 +382,9 @@ def webpage():
             url = (
                 f'https://financialmodelingprep.com/api/v3/grade/{company_name}?limit=10&apikey=f33b3631d5140a4f1c87e7f2eafd8fdd')
             response = urlopen(url)
-        except:
-            st.write(
-                f'No report with {company_name} is found.')
+        except Exception as ex:
+            print(ex)
+            st.write(f'No report with {company_name} is found.')
         data2 = json.loads(response.read().decode('utf-8'))
         col2.write(pd.DataFrame(data2).drop('symbol', axis=1))
 
